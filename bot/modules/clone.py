@@ -14,15 +14,15 @@ from bot.helper.telegram_helper.filters import CustomFilters
 
 @new_thread
 def cloneNode(update, context):
-    LOGGER.info('User: {} [{}]'.format(update.message.from_user.first_name, update.message.from_user.id))
+    LOGGER.info(
+        f'User: {update.message.from_user.first_name} [{update.message.from_user.id}]'
+    )
+
     args = update.message.text.split(" ", maxsplit=1)
     reply_to = update.message.reply_to_message
-    link = ''
-    if len(args) > 1:
-        link = args[1]
-    if reply_to is not None:
-        if len(link) == 0:
-            link = reply_to.text
+    link = args[1] if len(args) > 1 else ''
+    if reply_to is not None and len(link) == 0:
+        link = reply_to.text
     is_appdrive = is_appdrive_link(link)
     is_gdtot = is_gdtot_link(link)
     is_sharer = is_sharer_link(link)
@@ -55,10 +55,9 @@ def cloneNode(update, context):
         if is_gdtot:
             LOGGER.info(f"Deleting: {link}")
             gd.deleteFile(link)
-        if is_appdrive:
-            if appdict.get('link_type') == 'login':
-                LOGGER.info(f"Deleting: {link}")
-                gd.deleteFile(link)
+        if is_appdrive and appdict.get('link_type') == 'login':
+            LOGGER.info(f"Deleting: {link}")
+            gd.deleteFile(link)
         if is_sharer:
             LOGGER.info(f"Deleting: {link}")
             gd.deleteFile(link)
@@ -74,7 +73,7 @@ def sendCloneStatus(link, msg, status, update, context):
         try:
             statmsg = f"<b>Cloning:</b> <a href='{status.source_folder_link}'>{status.source_folder_name}</a>\n━━━━━━━━━━━━━━" \
                       f"\n<b>Current file:</b> <code>{status.get_name()}</code>\n\n<b>Transferred</b>: <code>{status.get_size()}</code>"
-            if not statmsg == old_statmsg:
+            if statmsg != old_statmsg:
                 editMessage(statmsg, msg)
                 old_statmsg = statmsg
         except Exception as e:

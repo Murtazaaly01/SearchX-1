@@ -9,7 +9,7 @@ print("\t\033[1;95mB.\033[m Selected Drives (manual)")
 
 choice = input("\nChoose either \033[1;95mA\033[m or \033[1;95mB\033[m > ")
 
-if choice == 'A' or choice == 'a' or choice == '1':
+if choice in ['A', 'a', '1']:
     input("\n\033[1;95mNOTICE:\033[m Make sure Rclone is installed on your system PATH variable and Google Drive remote is configured properly\n\nPress ENTER to continue")
 
     print("\n\033[1;93mList of remotes")
@@ -41,11 +41,10 @@ if choice == 'A' or choice == 'a' or choice == '1':
     print(f"\nGenerated \033[1;96mdrive_list\033[m file with \033[1;96m{len(lines)}\033[m drives")
     exit()
 
-if choice == 'B' or choice == 'b' or choice == '2':
+if choice in ['B', 'b', '2']:
     num = int(input("\n\033[1;94mTotal number of drives >\033[m "))
-    count = 1
     msg = ''
-    while count <= num:
+    for count in range(1, num + 1):
         print(f"\n\033[1;93mDRIVE - {count}\n" \
               f"----------\033[m")
         name = input("Drive Name > ")
@@ -60,7 +59,6 @@ if choice == 'B' or choice == 'b' or choice == '2':
                 index = index[:-1]
         else:
             index = ''
-        count += 1
         msg += f"{name} {id} {index}\n"
 
     with open('drive_list', 'w') as f:

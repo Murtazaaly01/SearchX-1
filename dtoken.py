@@ -10,9 +10,13 @@ __G_DRIVE_TOKEN_FILE = "token.json"
 __OAUTH_SCOPE = ["https://www.googleapis.com/auth/drive"]
 if os.path.exists(__G_DRIVE_TOKEN_FILE):
     credentials = Credentials.from_authorized_user_file(__G_DRIVE_TOKEN_FILE, __OAUTH_SCOPE)
-    if not credentials or not credentials.valid:
-        if credentials and credentials.expired and credentials.refresh_token:
-            credentials.refresh(Request())
+    if (
+        (not credentials or not credentials.valid)
+        and credentials
+        and credentials.expired
+        and credentials.refresh_token
+    ):
+        credentials.refresh(Request())
 else:
     flow = InstalledAppFlow.from_client_secrets_file(
         'credentials.json', __OAUTH_SCOPE)

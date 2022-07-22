@@ -14,10 +14,15 @@ def start(update, context):
             sendMessage("<b>Access granted</b>", context.bot, update)
         else:
             sendMessage("<b>I'm alive :)</b>", context.bot, update)
-        LOGGER.info('Granted: {} [{}]'.format(update.message.from_user.first_name, update.message.from_user.id))
+        LOGGER.info(
+            f'Granted: {update.message.from_user.first_name} [{update.message.from_user.id}]'
+        )
+
     else:
         sendMessage("<b>Access denied</b>", context.bot, update)
-        LOGGER.info('Denied: {} [{}]'.format(update.message.from_user.first_name, update.message.from_user.id))
+        LOGGER.info(
+            f'Denied: {update.message.from_user.first_name} [{update.message.from_user.id}]'
+        )
 
 def ping(update, context):
     start_time = int(round(time.time() * 1000))

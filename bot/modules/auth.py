@@ -104,9 +104,7 @@ def unauthorize(update, context):
     sendMessage(msg, context.bot, update)
 
 def auth_chats(update, context):
-    users = ''
-    for user in AUTHORIZED_CHATS:
-        users += f"{user}\n"
+    users = ''.join(f"{user}\n" for user in AUTHORIZED_CHATS)
     users = users if users != '' else "None"
     sendMessage(f'<b><u>Authorized Chats</u></b>\n<code>{users}</code>\n', context.bot, update)
 

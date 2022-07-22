@@ -58,9 +58,13 @@ class GoogleDriveHelper:
         if not USE_SERVICE_ACCOUNTS:
             if os.path.exists(self.__G_DRIVE_TOKEN_FILE):
                 credentials = Credentials.from_authorized_user_file(self.__G_DRIVE_TOKEN_FILE, self.__OAUTH_SCOPE)
-            if credentials is None or not credentials.valid:
-                if credentials and credentials.expired and credentials.refresh_token:
-                    credentials.refresh(Request())
+            if (
+                (credentials is None or not credentials.valid)
+                and credentials
+                and credentials.expired
+                and credentials.refresh_token
+            ):
+                credentials.refresh(Request())
         else:
             LOGGER.info(f"Authorizing with {SERVICE_ACCOUNT_INDEX}.json file")
             credentials = service_account.Credentials.from_service_account_file(
@@ -74,9 +78,13 @@ class GoogleDriveHelper:
             if os.path.exists(self.__G_DRIVE_TOKEN_FILE):
                 LOGGER.info("Authorizing with token.json file")
                 credentials = Credentials.from_authorized_user_file(self.__G_DRIVE_TOKEN_FILE, self.__OAUTH_SCOPE)
-                if credentials is None or not credentials.valid:
-                    if credentials and credentials.expired and credentials.refresh_token:
-                        credentials.refresh(Request())
+                if (
+                    (credentials is None or not credentials.valid)
+                    and credentials
+                    and credentials.expired
+                    and credentials.refresh_token
+                ):
+                    credentials.refresh(Request())
                 return build('drive', 'v3', credentials=credentials, cache_discovery=False)
         return None
 
@@ -169,12 +177,16 @@ class GoogleDriveHelper:
             'parents': [dest_id]
         }
         try:
-            res = self.__service.files().copy(supportsAllDrives=True, fileId=file_id, body=body).execute()
-            return res
+            return (
+                self.__service.files()
+                .copy(supportsAllDrives=True, fileId=file_id, body=body)
+                .execute()
+            )
+
         except HttpError as err:
             if err.resp.get('content-type', '').startswith('application/json'):
                 reason = json.loads(err.content).get('error').get('errors')[0].get('reason')
-                if reason == 'userRateLimitExceeded' or reason == 'dailyLimitExceeded':
+                if reason in ['userRateLimitExceeded', 'dailyLimitExceeded']:
                     if USE_SERVICE_ACCOUNTS:
                         self.switchServiceAccount()
                         return self.copyFile(file_id, dest_id, status)
@@ -204,8 +216,7 @@ class GoogleDriveHelper:
                                                    pageSize=200,
                                                    fields='nextPageToken, files(id, name, mimeType, size)',
                                                    pageToken=page_token).execute()
-            for file in response.get('files', []):
-                files.append(file)
+            files.extend(iter(response.get('files', [])))
             page_token = response.get('nextPageToken', None)
             if page_token is None:
                 break
@@ -260,16 +271,16 @@ class GoogleDriveHelper:
                 err = err.last_attempt.exception()
             err = str(err).replace('>', '').replace('<', '')
             LOGGER.error(err)
-            if "User rate limit exceeded" in str(err):
+            if "User rate limit exceeded" in err:
                 msg = "User rate limit exceeded"
-            elif "File not found" in str(err):
+            elif "File not found" in err:
                 token_service = self.alt_authorize()
                 if token_service is not None:
                     self.__service = token_service
                     return self.clone(link, status)
                 msg = "No such file exists"
             else:
-                msg = str(err)
+                msg = err
             LOGGER.error(f"{msg}")
         return msg
 
@@ -304,7 +315,7 @@ class GoogleDriveHelper:
         file_id = file.get("id")
         if not IS_TEAM_DRIVE:
             self.__set_permission(file_id)
-        LOGGER.info("Created: {}".format(file.get("name")))
+        LOGGER.info(f'Created: {file.get("name")}')
         return file_id
 
     def count(self, link):
@@ -324,7 +335,6 @@ class GoogleDriveHelper:
                 msg += f'\n<b>Size: </b>{get_readable_file_size(self.total_bytes)}'
                 msg += f'\n<b>Type: </b>Folder'
                 msg += f'\n<b>SubFolders: </b>{self.total_folders}'
-                msg += f'\n<b>Files: </b>{self.total_files}'
             else:
                 msg += f'<b>Name: </b><code>{meta.get("name")}</code>'
                 if mime_type is None:
@@ -333,21 +343,21 @@ class GoogleDriveHelper:
                 self.gDrive_file(meta)
                 msg += f'\n<b>Size: </b>{get_readable_file_size(self.total_bytes)}'
                 msg += f'\n<b>Type: </b>{mime_type}'
-                msg += f'\n<b>Files: </b>{self.total_files}'
+            msg += f'\n<b>Files: </b>{self.total_files}'
         except Exception as err:
             if isinstance(err, RetryError):
                 LOGGER.info(f"Total attempts: {err.last_attempt.attempt_number}")
                 err = err.last_attempt.exception()
             err = str(err).replace('>', '').replace('<', '')
             LOGGER.error(err)
-            if "File not found" in str(err):
+            if "File not found" in err:
                 token_service = self.alt_authorize()
                 if token_service is not None:
                     self.__service = token_service
                     return self.count(link)
                 msg = "No such file exists"
             else:
-                msg = str(err)
+                msg = err
             LOGGER.error(f"{msg}")
         return msg
 
@@ -384,9 +394,8 @@ class GoogleDriveHelper:
         # request_id = order number of request = shared drive index (1 based)
         if exception:
             LOGGER.exception(f"{exception}")
-        else: 
-            if response['files']:
-                self.batch_dict[request_id] = response
+        elif response['files']:
+            self.batch_dict[request_id] = response
 
     def drive_query(self, DRIVE_ID, search_type, file_name):
         batch = self.__service.new_batch_http_request(self.receive_callback)
@@ -429,10 +438,10 @@ class GoogleDriveHelper:
         search_type = None
         if re.search("^-d ", file_name, re.IGNORECASE):
             search_type = '-d'
-            file_name = file_name[3: len(file_name)]
+            file_name = file_name[3:]
         elif re.search("^-f ", file_name, re.IGNORECASE):
             search_type = '-f'
-            file_name = file_name[3: len(file_name)]
+            file_name = file_name[3:]
         msg = ''
         response_count = 0
         content_count = 0
@@ -443,9 +452,8 @@ class GoogleDriveHelper:
         response = self.drive_query(DRIVE_ID, search_type, file_name)
         end = timer()
         time_taken = round(end-start, 2)
-        response_dict = self.batch_dict
         add_title_msg = True
-        if response_dict:
+        if response_dict := self.batch_dict:
             for files in response_dict:
                 index = int(files) - 1
                 if add_title_msg:
@@ -457,18 +465,14 @@ class GoogleDriveHelper:
                     if file.get('mimeType') == "application/vnd.google-apps.folder":
                         msg += f"🗂️<code>{file.get('name')}</code> <b>(folder)</b><br>" \
                                f"<b><a href='https://drive.google.com/drive/folders/{file.get('id')}'>Drive Link</a></b>"
-                        if INDEX_URL[index] is not None:
-                            file_namee = requests.utils.quote(f"{file.get('name')}")
-                            url = f"{INDEX_URL[index]}search?q={file_namee}"
-                            msg += f"<b> | <a href='{url}'>Index Link</a></b>"
                     else:
                         msg += f"📄<code>{file.get('name')}</code> <b>({get_readable_file_size(int(file.get('size', 0)))})" \
                                f"</b><br><b><a href='https://drive.google.com/uc?id={file.get('id')}" \
                                f"&export=download'>Drive Link</a></b>"
-                        if INDEX_URL[index] is not None:
-                            file_namee = requests.utils.quote(f"{file.get('name')}")
-                            url = f"{INDEX_URL[index]}search?q={file_namee}"
-                            msg += f"<b> | <a href='{url}'>Index Link</a></b>"
+                    if INDEX_URL[index] is not None:
+                        file_namee = requests.utils.quote(f"{file.get('name')}")
+                        url = f"{INDEX_URL[index]}search?q={file_namee}"
+                        msg += f"<b> | <a href='{url}'>Index Link</a></b>"
                     msg += '<br><br>'
                     content_count += 1
                     response_count += 1

@@ -43,9 +43,7 @@ def appdrive(url: str) -> str:
     except IndexError:
         raise DDLException("Invalid link")
     ddl_btn = etree.HTML(res.content).xpath("//button[@id='drc']")
-    info = {}
-    info['error'] = False
-    info['link_type'] = 'login'  # direct/login
+    info = {'error': False, 'link_type': 'login'}
     headers = {
         "Content-Type": f"multipart/form-data; boundary={'-'*4}_",
     }
@@ -85,15 +83,11 @@ def gdtot(url: str) -> str:
     res = client.get(url)
     res = client.get(f"https://new.gdtot.nl/dld?id={url.split('/')[-1]}")
     url = re.findall(r'URL=(.*?)"', res.text)[0]
-    info = {}
-    info['error'] = False
+    info = {'error': False}
     params = parse_qs(urlparse(url).query)
     if 'gd' not in params or not params['gd'] or params['gd'][0] == 'false':
         info['error'] = True
-        if 'msgx' in params:
-            info['message'] = params['msgx'][0]
-        else:
-            info['message'] = 'Invalid link'
+        info['message'] = params['msgx'][0] if 'msgx' in params else 'Invalid link'
     else:
         decoded_id = base64.b64decode(str(params['gd'][0])).decode('utf-8')
         drive_link = f'https://drive.google.com/open?id={decoded_id}'
@@ -114,10 +108,7 @@ def sharer(url: str, forced_login=False) -> str:
     res = scraper.get(url)
     token = re.findall("_token\s=\s'(.*?)'", res.text, re.DOTALL)[0]
     ddl_btn = etree.HTML(res.content).xpath("//button[@id='btndirect']")
-    info = {}
-    info['error'] = True
-    info['link_type'] = 'login'  # direct/login
-    info['forced_login'] = forced_login
+    info = {'error': True, 'link_type': 'login', 'forced_login': forced_login}
     headers = {
         'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
         'x-requested-with': 'XMLHttpRequest'
@@ -129,11 +120,11 @@ def sharer(url: str, forced_login=False) -> str:
         info['link_type'] = 'direct'
     if not forced_login:
         data['nl'] = 1
-    res = scraper.post(url+'/dl', headers=headers, data=data).json()
+    res = scraper.post(f'{url}/dl', headers=headers, data=data).json()
     if 'url' in res and res['url']:
         info['error'] = False
         info['gdrive_link'] = res['url']
-    if len(ddl_btn) and not forced_login and not 'url' in info:
+    if len(ddl_btn) and not forced_login and 'url' not in info:
         # retry download via login
         return sharer(url, forced_login=True)
     if not info['error']:

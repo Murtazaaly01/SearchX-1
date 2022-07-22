@@ -103,19 +103,13 @@ except KeyError:
 
 try:
     IS_TEAM_DRIVE = get_config('IS_TEAM_DRIVE')
-    if IS_TEAM_DRIVE.lower() == 'true':
-        IS_TEAM_DRIVE = True
-    else:
-        IS_TEAM_DRIVE = False
+    IS_TEAM_DRIVE = IS_TEAM_DRIVE.lower() == 'true'
 except KeyError:
     IS_TEAM_DRIVE = False
 
 try:
     USE_SERVICE_ACCOUNTS = get_config('USE_SERVICE_ACCOUNTS')
-    if USE_SERVICE_ACCOUNTS.lower() == 'true':
-        USE_SERVICE_ACCOUNTS = True
-    else:
-        USE_SERVICE_ACCOUNTS = False
+    USE_SERVICE_ACCOUNTS = USE_SERVICE_ACCOUNTS.lower() == 'true'
 except KeyError:
     USE_SERVICE_ACCOUNTS = False
 
@@ -202,15 +196,13 @@ if os.path.exists('drive_list'):
             except IndexError:
                 INDEX_URL.append(None)
 
-if DRIVE_ID:
-    pass
-else:
+if not DRIVE_ID:
     LOGGER.error("drive_list file is missing")
     exit(1)
 
 telegraph = []
 
-for i in range(TELEGRAPH_ACCS):
+for _ in range(TELEGRAPH_ACCS):
     sname = ''.join(random.SystemRandom().choices(string.ascii_letters, k=8))
     telegra_ph = Telegraph()
     telegra_ph.create_account(short_name=sname)
